@@ -71,39 +71,62 @@ void loop() {
             // Handle other states or do nothing in STATE_IDLE
             break;
     }
-
 }
 
 // Function to handle the first push button
 void handlePushButton1() {
-    currentState = STATE_ALTERNATIVE_SELECTED;
-    if (digitalRead(PB1_PIN) == LOW) {
-        // Implementation to handle momentary press and change state
-        currentState = STATE_ALTERNATIVE_SELECTED;
+  static unsigned long lastDebounceTimeUp = 0;
+  static unsigned long debounceDelay = 500;
 
-        // For demonstration purposes, just print a message
-        Serial.println("PushButton1 pressed");
+  // Check for a valid button state change (debouncing)
+  if (digitalRead(PB1_PIN) == HIGH && currentState == STATE_IDLE) {
+    lastDebounceTimeUp = millis();
+    Serial.println("stage1");
+    
+  }
+
+  // Check if the button state has remained stable for the debounce delay
+  if ((millis() - lastDebounceTimeUp) > debounceDelay) {
+    Serial.println("stage2");
+    if (digitalRead(PB1_PIN) == LOW) {
+      // Implementation to handle momentary press and change state
+      currentState = STATE_OUTPUT_ENABLED;
+      // For demonstration purposes, just print a message
+      Serial.println("PushButton1 pressed");
     }
+  }
 }
 
 // Function to handle the second push button
 void handlePushButton2() {
+  static unsigned long lastDebounceTimeUp = 0;
+  static unsigned long debounceDelay = 500;
+
+  // Check for a valid button state change (debouncing)
+  if (digitalRead(PB2_PIN) == HIGH && currentState == STATE_IDLE) {
+    lastDebounceTimeUp = millis();
+    Serial.println("stage1"); 
+    
+  }
+  
+  // Check if the button state has remained stable for the debounce delay
+  if ((millis() - lastDebounceTimeUp) > debounceDelay) {
+    Serial.println("stage2");
     if (digitalRead(PB2_PIN) == LOW) {
-        // Implementation to handle momentary press and change state
-        currentState = STATE_OUTPUT_ENABLED;
+      // Implementation to handle momentary press and change state
+      currentState = STATE_ALTERNATIVE_SELECTED;
+      // For demonstration purposes, just print a message
+      Serial.println("PushButton2 pressed");
 
-        // For demonstration purposes, just print a message
-        Serial.println("PushButton2 pressed");
     }
-
-    else {
-      currentState = STATE_IDLE;
-    }
+  }
 }
 
 // Function to generate the normal DATA waveform
 void generateDataWaveform() {
-  for (int i = 0; i < NUM_PULSES_DEBUG; ++i) {
+  int i = 0; 
+  while(i < NUM_PULSES_DEBUG) {
+    i+=1;
     digitalWrite(DATA_PIN, HIGH);  // Set DATA_PIN high for the pulse on-time
     delayMicroseconds(TON1_DEBUG);
         
@@ -111,24 +134,25 @@ void generateDataWaveform() {
     delayMicroseconds(TOFF_DEBUG);
     Serial.println("generateDataWaveform");
   }
-
+  currentState = STATE_IDLE;
   // Add idle time between the end of the final pulse off-time and the start of the next SYNC pulse
   delayMicroseconds(IDLE_TIME_DEBUG);
 }
 
 // Function to generate the alternative DATA waveform
 void generateAlternativeDataWaveform() {
-    // Implementation for an alternative waveform
-    for (int i = 0; i < NUM_PULSES_DEBUG; ++i) {
-        // Custom pattern for the alternative waveform (modify as needed)
-        digitalWrite(DATA_PIN, HIGH);
-        delayMicroseconds(TON1_DEBUG);
+  int i = 0; 
+  while(i < NUM_PULSES_DEBUG) {
+    i+=1;
+    // Custom pattern for the alternative waveform (modify as needed)
+    digitalWrite(DATA_PIN, HIGH);
+    delayMicroseconds(TON1_DEBUG);
 
-        digitalWrite(DATA_PIN, LOW);
-        delayMicroseconds(TOFF_DEBUG * 2); // Longer off-time for the alternative waveform
-        Serial.println("generateAlternativeDataWaveform");
-    }
-
+    digitalWrite(DATA_PIN, LOW);
+    delayMicroseconds(TOFF_DEBUG * 2); // Longer off-time for the alternative waveform
+    Serial.println("generateAlternativeDataWaveform");
+  }
+    currentState = STATE_IDLE;
     // Add idle time between the end of the final pulse off-time and the start of the next SYNC pulse
     delayMicroseconds(IDLE_TIME_DEBUG);
 }
