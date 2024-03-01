@@ -1,3 +1,4 @@
+// Include necessary libraries
 #include <Arduino.h>
 
 // Define compile-time switch for DEBUG timing
@@ -9,7 +10,7 @@
     #define TOFF_DEBUG    100000  // DEBUG off-time in milliseconds (factor of 1000)
     #define NUM_PULSES_DEBUG  10  // DEBUG number of pulses
     #define IDLE_TIME_DEBUG   200000 // DEBUG idle time between DATA and SYNC pulses
-    #define TSYNC_ON_DEBUG    5000  // DEBUG SYNC on-time
+    #define TSYNC_ON_DEBUG    500000 // DEBUG SYNC on-time
 #else
     #define TON1_PROD    100    // PRODUCTION on-time in milliseconds
     #define TOFF_PROD    100    // PRODUCTION off-time in milliseconds
@@ -34,12 +35,16 @@ enum SystemState {
 // Variable to store the current state
 SystemState currentState = STATE_IDLE;
 
+// Variable to store the User's Surname
+String userSurname = "ab";
+
 // Function prototypes
 void handlePushButton1();
 void handlePushButton2();
 void generateDataWaveform();
 void generateAlternativeDataWaveform();
 void generateSyncPulse();
+void calculateTimingParameters();
 
 // Setup function
 void setup() {
@@ -69,8 +74,14 @@ void loop() {
             break;
         default:
             // Handle other states or do nothing in STATE_IDLE
+            // Generate SYNC pulse
+            generateSyncPulse();
             break;
     }
+    calculateTimingParameters(userSurname);
+
+    delay(5000);  // Delay for better readability in the serial monitor
+
 }
 
 // Function to handle the first push button
@@ -155,4 +166,79 @@ void generateAlternativeDataWaveform() {
     currentState = STATE_IDLE;
     // Add idle time between the end of the final pulse off-time and the start of the next SYNC pulse
     delayMicroseconds(IDLE_TIME_DEBUG);
+}
+
+// Function to generate the SYNC pulse
+void generateSyncPulse() {
+#ifdef DEBUG_TIMING
+    const unsigned long TSYNC_ON = TSYNC_ON_DEBUG;
+#else
+    const unsigned long TSYNC_ON = TSYNC_ON_PROD;
+#endif
+    // Set SYNC_PIN high for the SYNC on-time
+    digitalWrite(SYNC_PIN, HIGH);
+    delayMicroseconds(TSYNC_ON_DEBUG);
+
+    // Set SYNC_PIN low to complete the SYNC pulse
+    digitalWrite(SYNC_PIN, LOW);
+}
+
+// Part 2
+// Function to calculate the Output Timing Parameters
+void calculateTimingParameters(const String& surname) {
+    // Ensure the surname has at least one character
+    if (surname.length() == 0) {
+        Serial.println("Error: Surname is empty.");
+        return;
+    }
+
+    // Extend the surname if it has less than four letters
+    String extendedSurname = surname;
+    while (extendedSurname.length() < 4) {
+        extendedSurname += surname.charAt(surname.length() - 1);
+    }
+
+    // Extract the first four letters
+    String firstFourLetters = extendedSurname.substring(0, 4);
+
+    // Map each letter to its corresponding numeric value
+    int mapping[4];
+    for (int i = 0; i < 4; ++i) {
+        char currentLetter = firstFourLetters[i];
+        int numericValue = 0;
+
+        // Map letters a-z to numeric values
+        if (currentLetter >= 'a' && currentLetter <= 'z') {
+            numericValue = currentLetter - 'a' + 1;
+        }
+        // Map letters A-Z to numeric values
+        else if (currentLetter >= 'A' && currentLetter <= 'Z') {
+            numericValue = currentLetter - 'A' + 1;
+        }
+
+        mapping[i] = numericValue;
+    }
+
+    // Calculate Output Timing Parameters
+    unsigned long parameter1 = mapping[0] * 100;      // First Letter Numerical Mapping x 100us
+    unsigned long parameter2 = mapping[1] * 100;      // Second Letter Numerical Mapping x 100us
+    unsigned long parameter3 = (mapping[2] + 4) * 100; // Third Letter Numerical Mapping + 4
+    unsigned long parameter4 = mapping[3] * 500;      // Fourth Letter Numerical Mapping x 500us
+
+    // Print the calculated parameters
+    Serial.print("Parameter 1: ");
+    Serial.print(parameter1);
+    Serial.println(" us");
+
+    Serial.print("Parameter 2: ");
+    Serial.print(parameter2);
+    Serial.println(" us");
+
+    Serial.print("Parameter 3: ");
+    Serial.print(parameter3);
+    Serial.println(" us");
+
+    Serial.print("Parameter 4: ");
+    Serial.print(parameter4);
+    Serial.println(" us");
 }
